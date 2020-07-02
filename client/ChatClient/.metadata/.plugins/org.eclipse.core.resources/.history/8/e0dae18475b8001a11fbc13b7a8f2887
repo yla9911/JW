@@ -1,0 +1,228 @@
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.List;
+import java.awt.event.*;
+import java.util.*;
+
+
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+public class ChatClient extends JFrame implements KeyListener, ActionListener, FocusListener,ListSelectionListener {
+    public static final String appName = "Chat Tool";
+    public static final String serverText = "127.0.0.1";
+    public static final String portText = "3500";
+    public static final String nickText = "YourName";
+    JPanel northPanel, southPanel, centerPanel;
+    JTextField txtHost, txtPort, msgWindow, txtNick;
+    JButton buttonConnect, buttonSend;
+    JScrollPane sc;
+    ClientKernel ck;
+    ClientHistory historyWindow;//ClientHistory类在下面定义，继承自JEditPane类
+    DefaultListModel d;
+    
+    
+    //this is s test
+    	private JList<String> list;
+//    	private JTextField tf=new JTextField("文本框");
+    	private  String[] color={"红色","黄色","蓝色","绿色","紫色","橙色","黑色"}; 
+   // 
+    	
+   //listclick test
+    	MouseListener mouseListener = new MouseAdapter() {
+            public void mouseClicked(MouseEvent mouseEvent) {
+                JList theList = (JList) mouseEvent.getSource();
+                if (mouseEvent.getClickCount() == 2) {
+                    int index = theList.getSelectedIndex();
+                    if (index >= 0) {
+//                        String s = theList.getItem(index);
+                    	String s =theList.getSelectedValue().toString();
+                    	
+                        JOptionPane.showMessageDialog(null, s, s, JOptionPane.ERROR_MESSAGE); 
+                    }
+                }
+            }
+        };
+    	//
+    	
+    private String lastMsg = "";
+    /** Creates a new instance of Class */
+    public ChatClient() {
+        uiInit();
+        txtHost.setText("127.0.0.1");
+        txtPort.setText("3500");
+    }
+    public void uiInit() {
+        setLayout(new BorderLayout());
+        //创建North
+        northPanel = new JPanel(new GridLayout(0,2));
+        northPanel.add(new JLabel("Host address:"));
+        northPanel.add(txtHost = new JTextField(ChatClient.serverText));
+        northPanel.add(new JLabel("Port:"));
+        northPanel.add(txtPort = new JTextField(ChatClient.portText));
+        northPanel.add(new JLabel("Nick:"));
+        northPanel.add(txtNick = new JTextField(ChatClient.nickText));
+        northPanel.add(new JLabel(""));
+        northPanel.add(new JLabel(""));
+        northPanel.add(new JLabel(""));
+        northPanel.add(buttonConnect = new JButton("Connect"));
+        buttonConnect.addActionListener(this);
+        
+        txtHost.addKeyListener(this);
+        txtHost.addFocusListener(this);
+        txtNick.addFocusListener(this);
+        txtNick.addKeyListener(this);
+        txtPort.addKeyListener(this);
+        txtPort.addFocusListener(this);
+        buttonConnect.addKeyListener(this);
+        this.add(northPanel, BorderLayout.NORTH);
+        
+        //创建Sourth
+        southPanel = new JPanel();
+        southPanel.add(msgWindow = new JTextField(20));
+        southPanel.add(buttonSend = new JButton("Send"));
+        buttonSend.addActionListener(this);
+        msgWindow.addKeyListener(this);
+        add(southPanel, BorderLayout.SOUTH);
+        
+        //创建Center
+        historyWindow = new ClientHistory();  //ClientHistory类在下面定义，继承自JEditPane类
+        sc = new JScrollPane(historyWindow);
+        sc.setAutoscrolls(true);
+        //sc.setPreferredSize(new Dimension(200,300));
+        //this.add(sc, BorderLayout.EAST);
+        
+        //创建列表框
+       // list=new JList<String>(color);
+        d = new DefaultListModel();//只有默认的模型有添加/删除方法
+        d.addElement("a");
+        d.addElement("b");
+        list = new JList(d);
+        JScrollPane ps=new JScrollPane(list);
+        
+        list.addListSelectionListener(this);
+        list.addMouseListener(mouseListener);
+        
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+      //  ps.setPreferredSize(new Dimension(200,100));
+  
+        JSplitPane jSplitPane =new JSplitPane();//设定为左右拆分布局
+        jSplitPane.setOneTouchExpandable(true);//让分割线显示出箭头
+        jSplitPane.setContinuousLayout(true);//操作箭头，重绘图形
+        jSplitPane.setLeftComponent(ps);//布局中添加组件 ，面板1
+        jSplitPane.setRightComponent(sc);//添加面板2
+        jSplitPane.setDividerLocation(100);//设定分割线的距离左边的位置
+        
+        
+        this.add(jSplitPane,BorderLayout.CENTER);
+        
+    }
+    @Override
+    public void valueChanged(ListSelectionEvent e) {
+
+        JList<?> jlist=(JList<?>) e.getSource();
+        String name=(String) jlist.getSelectedValue();
+//        JOptionPane.showMessageDialog(this, "提示消息", "标题",JOptionPane.WARNING_MESSAGE);  
+        if(name=="红色") list.setBackground(Color.RED);
+        if(name=="黄色") list.setBackground(Color.YELLOW);
+        if(name=="蓝色") list.setBackground(Color.BLUE);
+        if(name=="绿色") list.setBackground(Color.GREEN);
+
+    }
+   public static void main(String args[]) {
+        ChatClient client = new ChatClient();
+        client.setTitle(client.appName);
+        client.setSize(450, 500);
+        client.setLocation(100,100);
+        client.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        client.setVisible(true);
+        client.msgWindow.requestFocus();
+    }
+    public void addMsg(String str) {
+    	
+        historyWindow.addText(str);
+    }
+    
+    //this is a test
+    public void updateList(String str) {
+    	d.clear();
+    	d.addElement(str);
+    }
+    
+    
+    //this is a test
+    private void connect() {
+        try {
+            if(ck!=null) ck.dropMe();
+            ck = new ClientKernel(txtHost.getText(), Integer.parseInt(txtPort.getText()));
+            ck.setNick(txtNick.getText());
+            if(ck.isConnected()) {
+                ck.addClient(this);
+                addMsg("<font color=\"#00ff00\">connected! Local Port:" + ck.getLocalPort() + "</font>");
+            } else {
+                addMsg("<font color=\"#ff0000\">connect failed！</font>");
+            }
+        } catch(Exception e) { e.printStackTrace(); }
+    }
+    private void send() {
+        String toSend = msgWindow.getText();
+        ck.sendMessage(toSend);
+        lastMsg = "" + toSend;
+        msgWindow.setText("");
+       
+        //测试列表框
+       // d.addElement("c");
+
+    }
+    public void keyPressed(KeyEvent e) {
+    }
+    public void keyReleased(KeyEvent e) {
+        if(e.getSource() == msgWindow && e.getKeyCode() == KeyEvent.VK_UP) msgWindow.setText(lastMsg);
+    }
+    public void keyTyped(KeyEvent e) {
+        if(e.getKeyChar() ==KeyEvent.VK_ENTER) {
+            if(e.getSource() == msgWindow) send();
+            if(e.getSource() == txtNick) { connect(); msgWindow.requestFocus(); }
+            if(e.getSource() == txtHost) txtPort.requestFocus();
+            if(e.getSource() == txtPort) txtNick.requestFocus();
+        }
+    }
+    public void actionPerformed(ActionEvent e) {
+        if(e.getSource()==buttonConnect) {connect();}
+        if(e.getSource()==buttonSend) send();
+        
+    }
+    public void focusGained(FocusEvent e) {
+        if(e.getSource()==txtHost && txtHost.getText().equals(ChatClient.serverText)) txtHost.setText("");
+        if(e.getSource()==txtPort && txtPort.getText().equals(ChatClient.portText)) txtPort.setText("");
+        if(e.getSource()==txtNick && txtNick.getText().equals(ChatClient.nickText)) txtNick.setText("");
+    }
+    public void focusLost(FocusEvent e) {
+       if(e.getSource()==txtPort && txtPort.getText().equals("")) txtPort.setText(ChatClient.portText);
+       if(e.getSource()==txtHost && txtHost.getText().equals("")) txtHost.setText(ChatClient.serverText);
+       if(e.getSource()==txtNick && txtNick.getText().equals(ChatClient.nickText)) 
+                                                            txtNick.setText(ChatClient.nickText);
+    }
+    class ClientHistory extends JEditorPane {
+        public ClientHistory() {
+            super("text/html", "" + ChatClient.appName);
+            setEditable(false);
+            setAutoscrolls(true);
+        }
+        public void addText(String str) {
+            String html = getText();
+            int end = html.lastIndexOf("</body>");
+            String startStr = html.substring(0, end);
+            String endStr = html.substring(end, html.length());
+            String newHtml = startStr + "<br>" + str + endStr;
+            setText(newHtml);
+            setSelectionStart(newHtml.length()-1);
+            setSelectionEnd(newHtml.length());
+         }
+        public void clear() {
+            setText("");
+        }
+    }
+}
+
